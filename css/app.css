@@ -288,6 +288,9 @@ body.auth-mode .topbar, body.auth-mode .nav { display: none; }
 
 .stage { position: relative; background: var(--inset); border: 1px solid var(--line); border-radius: 18px; margin: 12px 0; overflow: hidden; }
 .stage svg { width: 100%; height: 230px; display: block; }
+.stage.video { background: #dadcd9; }
+.stage video { width: 100%; max-height: 340px; aspect-ratio: 1; object-fit: contain; display: block; margin: 0 auto; }
+.lib-item .demo-img { width: 100%; display: block; background: #dadcd9; border-radius: 10px; aspect-ratio: 240 / 225; object-fit: contain; }
 .phase { position: absolute; top: 10px; left: 10px; padding: 5px 10px; border-radius: 9px; background: rgba(9, 9, 11, .9); border: 1px solid var(--lime-line); color: var(--lime); font-size: 12px; font-weight: 800; }
 .phase.p1 { border-color: var(--line-2); color: var(--text-2); }
 .phase.p2 { border-color: var(--orange-line); color: var(--orange); }
