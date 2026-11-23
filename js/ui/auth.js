@@ -25,7 +25,7 @@ export function showAuth(main, opts = {}) {
     const pw = view !== "forgot";
     const pw2 = view === "signup" || view === "newpass";
     main.innerHTML = `<div class="tab auth">
-      <div class="auth-brand"><div class="logo">${icon("bolt")}</div><div><h1>Antrenman</h1><p class="tiny muted">Kişisel antrenman ve beslenme takibi</p></div></div>
+      <div class="auth-brand"><div class="logo">${icon("bolt")}</div><div><h1>FitPro</h1><p class="tiny muted">Kişisel antrenman ve beslenme takibi</p></div></div>
       ${view === "login" || view === "signup" ? `<div class="seg auth-seg" role="tablist" aria-label="Giriş veya kayıt">
         <button type="button" role="tab" data-view="login" aria-selected="${view === "login"}">Giriş yap</button>
         <button type="button" role="tab" data-view="signup" aria-selected="${view === "signup"}">Hesap oluştur</button>

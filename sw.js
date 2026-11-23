@@ -1,6 +1,6 @@
 // Çevrimdışı çalışma: uygulama dosyaları önbelleğe alınır, ağ varsa güncel sürüm kullanılır.
 // Dosya eklediğinde/değiştirdiğinde VERSION'ı artır.
-const VERSION = "v3-4";
+const VERSION = "v3-5";
 const CACHE = "antrenman-" + VERSION;
 const ASSETS = [
   "./", "index.html", "manifest.json", "icon.svg", "icon-192.png", "icon-512.png", "css/app.css",
