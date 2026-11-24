@@ -78,8 +78,9 @@ export async function signIn(email, password) {
 }
 
 // Onay e-postası açıksa oturum dönmez: { session: null } → kullanıcıya "e-postanı onayla" denir
-export async function signUp(email, password) {
-  const t = await call(`/signup?redirect_to=${redirectTo()}`, { body: { email, password } });
+// meta: hesabın kullanıcı bilgisine yazılır (ör. aydınlatma metni sürümü ve açık rıza zamanı — kayıt kanıtı)
+export async function signUp(email, password, meta = {}) {
+  const t = await call(`/signup?redirect_to=${redirectTo()}`, { body: { email, password, data: meta } });
   if (t.access_token) {
     const s = fromToken(t, t.user);
     setSession(s);

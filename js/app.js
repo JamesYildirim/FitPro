@@ -2,7 +2,8 @@
 import { state } from "./state/store.js";
 import { cloudConfigured } from "./config.js";
 import { getSession, consumeRedirect } from "./cloud/auth.js";
-import { initSync } from "./cloud/sync.js";
+import { initSync, logout } from "./cloud/sync.js";
+import { ensureConsent } from "./ui/privacy.js";
 import { icon, toast } from "./ui/dom.js";
 import { showAuth, hideAuth } from "./ui/auth.js";
 import { initTimer } from "./ui/timer.js";
@@ -68,6 +69,16 @@ function boot() {
   }
   normalizeProgram();
   ctx.go(startTab());
+  if (cloudConfigured() && getSession()) requireConsent();
+}
+
+// Hesaplı kullanımda aydınlatma metni + yurt dışı aktarım açık rızası şart (KVKK m.9, m.10).
+// Pencere karar verilmeden kapatılırsa yeniden açılır; reddedilirse çıkış yapılır.
+async function requireConsent() {
+  let answer;
+  while ((answer = await ensureConsent()) === "dismiss");
+  if (answer === "no" && (await logout())) ctx.signedOut();
+  else if (answer === "no") requireConsent(); // çıkıştan vazgeçti: onay yeniden istenir
 }
 
 // Buluttan farklı veri gelince ekranı yenile

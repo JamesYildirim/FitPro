@@ -3,6 +3,12 @@ import { DEMO } from "../core/anim.js";
 import { getDemo } from "../data/demos.js";
 import { videoOf } from "../data/videos.js";
 import { esc, icon, openSheet } from "./dom.js";
+import { bodyMap, exerciseLevels } from "./bodymap.js";
+
+// Hareketin çalıştırdığı kaslar: ön/arka vücut haritası
+const mapBlock = (name) => `<div class="bm-card">
+  ${bodyMap(exerciseLevels(name), { label: esc(name) + ": çalışan kaslar" })}
+  <div class="bm-legend"><span class="p">Ana kas</span><span class="s">Yardımcı kas</span></div></div>`;
 
 export const VIEWBOX = "0 -40 240 225";
 
@@ -50,6 +56,7 @@ export function openDemo(name) {
       </div>
       <input type="range" min="0" max="1000" value="0" data-scrub aria-label="Hareketin anı">
     </div>
+    ${mapBlock(name)}
     <ol class="cues">${d.cues.map((c) => `<li>${esc(c)}</li>`).join("")}</ol>
     <a class="btn block" style="margin-top:14px" href="${yt}" target="_blank" rel="noopener">${icon("external")} YouTube'da video ara</a>
   `, { label: name + " nasıl yapılır", onClose: () => cancelAnimationFrame(raf) });
@@ -122,6 +129,7 @@ function openVideo(name, d, video) {
       </div>
       <input type="range" min="0" max="1000" value="0" data-scrub aria-label="Videonun anı">
     </div>
+    ${mapBlock(name)}
     <ol class="cues">${d.cues.map((c) => `<li>${esc(c)}</li>`).join("")}</ol>
     <a class="btn block" style="margin-top:14px" href="${ytLink(name)}" target="_blank" rel="noopener">${icon("external")} YouTube'da video ara</a>
   `, { label: name + " nasıl yapılır", onClose: () => { v.pause(); v.removeAttribute("src"); v.load(); } });

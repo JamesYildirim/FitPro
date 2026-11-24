@@ -4,6 +4,8 @@ import { burnedKcal, kcalFromMacros } from "../core/nutrition.js";
 import { esc, fmt, fmtDate, icon, toast, openSheet, DAY_MS } from "./dom.js";
 import { dailyTargets, profileChanges } from "./plan.js";
 import { pickerHtml, initPickers } from "./wheel.js";
+import { hasAiKey } from "../ai/key.js";
+import { openPhotoFlow } from "./foodphoto.js";
 
 const MEALS = [["kahvalti", "Kahvaltı"], ["ogle", "Öğle"], ["aksam", "Akşam"], ["ara", "Ara öğün"]];
 const mealLabel = (k) => MEALS.find(([m]) => m === k)?.[1] || k;
@@ -148,6 +150,10 @@ function openFoodSheet(ctx, meal, existing = null) {
       <div><div class="eyebrow">${mealLabel(existing ? existing.meal : meal)}</div><div class="h2">${existing ? "Kaydı düzenle" : "Yiyecek ekle"}</div></div>
       <button type="button" class="close" data-close aria-label="Kapat">${icon("x")}</button>
     </div>
+    ${existing ? "" : hasAiKey()
+      ? `<label class="btn block ai-photo-btn" style="margin-top:14px">${icon("camera")} Fotoğraftan ekle <span class="tiny muted">yapay zekâ</span>
+          <input type="file" accept="image/*" class="sr-only" data-photo></label>`
+      : `<p class="tiny muted" style="margin:12px 0 0">Yemeğin fotoğrafından kalori tahmini için <button type="button" class="link-btn" data-ai-setup>Profil → Yapay zekâ</button> kartına API anahtarını ekle.</p>`}
     ${!existing && (fav.length || recent.length) ? `
       ${fav.length ? `<div class="section-title" style="margin-top:14px">Favoriler</div>${fav.map((f, i) => item(f, i, "fav")).join("")}` : ""}
       ${recent.length ? `<div class="section-title" style="margin-top:14px">Son eklenenler</div>${recent.map((f, i) => item(f, i, "recent")).join("")}` : ""}
@@ -174,7 +180,22 @@ function openFoodSheet(ctx, meal, existing = null) {
   const addEntry = (data) => {
     (state.food[viewDay] ||= []).push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), meal, ...data });
   };
+  el.querySelector("[data-photo]")?.addEventListener("change", (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    sheet.close();
+    openPhotoFlow(file, {
+      mealLabel: mealLabel(meal),
+      onAdd: (entries) => {
+        for (const x of entries) addEntry(x);
+        save();
+        toast(`${entries.length} kalem eklendi · ${fmt(entries.reduce((a, x) => a + x.kcal, 0), 0)} kcal`);
+        ctx.refresh();
+      },
+    });
+  });
   el.addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-ai-setup]")) { sheet.close(); return ctx.go("profile"); }
     const q = ev.target.closest("[data-quick]");
     if (q) {
       const [kind, i] = q.dataset.quick.split(":");

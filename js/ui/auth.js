@@ -2,6 +2,8 @@
 // Ekran açıkken üst bar ve alt menü gizlenir (body.auth-mode).
 import { signIn, signUp, requestPasswordReset, updatePassword } from "../cloud/auth.js";
 import { esc, icon } from "./dom.js";
+import { LEGAL_VERSION, TRANSFER_CONSENT } from "../legal.js";
+import { openPrivacy, rememberSignupConsent } from "./privacy.js";
 
 const MIN_PASSWORD = 8;
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -42,11 +44,14 @@ export function showAuth(main, opts = {}) {
         ${pw2 ? `<label class="field"><span class="label">Şifre (tekrar)</span>
           <input class="input" type="password" name="password2" autocomplete="new-password" required></label>
           <p class="tiny muted" style="margin:-6px 0 12px">En az ${MIN_PASSWORD} karakter.</p>` : ""}
+        ${view === "signup" ? `<p class="tiny muted" style="margin:0 0 10px">Hesap açmadan önce <button type="button" class="link-btn inline" data-privacy>aydınlatma metnini</button> oku.</p>
+          <label class="consent-row" style="margin-bottom:12px"><input type="checkbox" name="transfer"><span class="tiny">${esc(TRANSFER_CONSENT)}</span></label>` : ""}
         <p class="small hidden" style="color:var(--red);margin:0 0 10px" data-err role="alert"></p>
         <button type="submit" class="btn primary block" data-submit>${v.btn}</button>
         ${view === "login" ? `<button type="button" class="link-btn" data-view="forgot">Şifremi unuttum</button>` : ""}
         ${view === "forgot" ? `<button type="button" class="link-btn" data-view="login">Girişe dön</button>` : ""}
       </form>
+      <p class="tiny muted" style="text-align:center;margin-top:14px"><button type="button" class="link-btn inline" data-privacy>KVKK aydınlatma metni</button></p>
     </div>`;
     const first = [...main.querySelectorAll("input")].find((i) => !i.value) || main.querySelector("input");
     first?.focus({ preventScroll: true });
@@ -55,6 +60,7 @@ export function showAuth(main, opts = {}) {
   const go = (next, n = null) => { view = next; notice = n; draw(); };
 
   main.onclick = (e) => {
+    if (e.target.closest("[data-privacy]")) return openPrivacy();
     const v = e.target.closest("[data-view]");
     if (v) { const f = main.querySelector("[name=email]"); if (f) email = f.value.trim(); return go(v.dataset.view); }
     const t = e.target.closest("[data-toggle]");
@@ -84,13 +90,16 @@ export function showAuth(main, opts = {}) {
     if (view !== "forgot" && !password) return fail("Şifreni gir.", "password");
     if ((view === "signup" || view === "newpass") && password.length < MIN_PASSWORD) return fail(`Şifre en az ${MIN_PASSWORD} karakter olmalı.`, "password");
     if ((view === "signup" || view === "newpass") && password !== fd.get("password2")) return fail("Şifreler aynı değil.", "password2");
+    if (view === "signup" && !fd.get("transfer")) return fail("Hesap açmak için yurt dışı aktarıma açık rıza kutusunu işaretlemen gerekiyor; uygulama bu sunucular olmadan çalışamaz.", "transfer");
 
     const label = btn.textContent;
     btn.disabled = true; btn.textContent = "Lütfen bekle…";
     try {
       if (view === "login") return opts.onDone?.(await signIn(email, password));
       if (view === "signup") {
-        const { session } = await signUp(email, password);
+        const consentAt = new Date().toISOString();
+        const { session } = await signUp(email, password, { privacy_version: LEGAL_VERSION, transfer_consent_at: consentAt });
+        rememberSignupConsent();
         if (session) return opts.onDone?.(session);
         return go("login", { kind: "lime", text: `Hesabın oluşturuldu. ${email} adresine gelen onay bağlantısına tıkla, sonra burada giriş yap.` });
       }

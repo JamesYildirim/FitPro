@@ -8,6 +8,8 @@
 //   food:    { "YYYY-MM-DD": [{ id, meal, name, portion, qty, kcal, p, c, f }] }   değerler 1 porsiyon için, toplam = değer × qty
 //   favorites: [{ name, portion, kcal, p, c, f }]
 //   weights: [{ date: "YYYY-MM-DD", kg }]   tarihe göre artan
+//   settings: antrenman ayarları (dinlenme süresi, ses, titreşim, ekran) — bkz. state/settings.js
+//   legal:    { version, acceptedAt, transferConsentAt }  aydınlatma metni ve yurt dışı aktarım açık rızası kaydı
 
 import { renameDeep } from "../data/renames.js";
 
@@ -15,7 +17,7 @@ const KEY = "antrenman.v2";
 const VERSION = 2;
 const empty = () => ({
   v: VERSION, profile: null, prefs: { goal: "kas", days: "4", level: "orta", location: "salon", equipment: [] }, program: null, active: null, history: [],
-  food: {}, favorites: [], weights: [],
+  food: {}, favorites: [], weights: [], settings: {}, legal: {},
 });
 
 // Yerel saatle "YYYY-MM-DD"

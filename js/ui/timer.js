@@ -1,5 +1,6 @@
 // Dinlenme sayacı: bitiş zamanına göre çalışır (ekran kilitlense de doğru kalır), üst barda küçük gösterge
 import { icon, openSheet, toast, vibrate } from "./dom.js";
+import { settings, REST_MAX, REST_STEP } from "../state/settings.js";
 
 const t = { total: 90, endAt: 0, pausedLeft: 90, running: false };
 let tick = 0;
@@ -37,8 +38,9 @@ function update() {
     t.running = false;
     t.pausedLeft = 0;
     clearInterval(tick);
-    vibrate([200, 100, 200]);
-    beep();
+    const s = settings();
+    if (s.vibrate) vibrate([200, 100, 200]);
+    if (s.sound) beep();
     toast("Dinlenme bitti — sıradaki sete geç!");
     update();
   }
@@ -63,6 +65,19 @@ function toggle() {
   update();
 }
 
+// Süren dinlenmeyi uzat / kısalt (çalışmıyorsa bekleyen süreyi değiştirir)
+function adjust(delta) {
+  if (t.running) {
+    const next = Math.min(REST_MAX, Math.max(0, left() + delta));
+    t.endAt = Date.now() + next * 1000;
+    t.total = Math.max(t.total + delta, next, 1);
+  } else {
+    t.pausedLeft = Math.min(REST_MAX, Math.max(REST_STEP, (t.pausedLeft || t.total) + delta));
+    t.total = Math.max(t.pausedLeft, 1);
+  }
+  update();
+}
+
 function reset(seconds = t.total) {
   t.total = seconds;
   t.pausedLeft = seconds;
@@ -84,6 +99,10 @@ export function openTimer() {
       </svg>
       <div class="val"><b data-val>00:00</b><span data-status></span></div>
     </div>
+    <div class="adjust">
+      <button type="button" data-adjust="-${REST_STEP}" aria-label="${REST_STEP} saniye kısalt">−${REST_STEP} sn</button>
+      <button type="button" data-adjust="${REST_STEP}" aria-label="${REST_STEP} saniye uzat">+${REST_STEP} sn</button>
+    </div>
     <div class="presets">
       ${[60, 90, 120, 180].map((s) => `<button type="button" data-preset="${s}">${s < 120 ? s + " sn" : s / 60 + " dk"}</button>`).join("")}
     </div>
@@ -95,6 +114,7 @@ export function openTimer() {
   sheet.el.querySelector("[data-toggle]").addEventListener("click", toggle);
   sheet.el.querySelector("[data-reset]").addEventListener("click", () => reset());
   sheet.el.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => reset(+b.dataset.preset)));
+  sheet.el.querySelectorAll("[data-adjust]").forEach((b) => b.addEventListener("click", () => adjust(+b.dataset.adjust)));
   update();
 }
 

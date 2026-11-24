@@ -3,6 +3,8 @@
 // Listede olmayan hareketlerde çubuk figür animasyonu gösterilir.
 export const VIDEOS = {
   "Barbell Back Squat": "barbell-back-squat",
+  "Front Squat": "front-squat",
+  "Safety Bar Squat": "safety-bar-squat",
 };
 
 export function videoOf(name) {

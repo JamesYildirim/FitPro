@@ -3,6 +3,7 @@ import { state, save, dayKey } from "../state/store.js";
 import { dailyTargets } from "./plan.js";
 import { e1rm, performances, setsText } from "../core/progression.js";
 import { esc, fmt, fmtDate, icon, toast, DAY_MS, ask } from "./dom.js";
+import { bodyMap, volumeLevels } from "./bodymap.js";
 
 const vol = (h) => h.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.kg * s.reps, 0), 0);
 const setCount = (h) => h.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -76,7 +77,9 @@ function volumeBars() {
   if (!rows) return `<p class="small muted">Program oluşturduğunda kas grubu başına haftalık set dağılımı burada görünür.</p>`;
   const scale = Math.max(...rows.map((r) => Math.max(r.max, r.sets))) || 1;
   const pct = (x) => (x / scale * 100).toFixed(1) + "%";
-  return rows.map((r) => {
+  const map = `<div class="bm-card" style="margin:0 0 12px">${bodyMap(volumeLevels(rows), { label: "Haftalık set dağılımı kas haritası" })}
+    <div class="bm-legend"><span class="lo">Hedefin altında</span><span class="ok">Hedef aralığında</span><span class="hi">Hedefin üstünde</span></div></div>`;
+  return map + rows.map((r) => {
     const cls = r.sets < r.min - 0.5 ? "low" : r.sets > r.max + 2 ? "high" : "";
     const state_ = cls === "low" ? "hedefin altında" : cls === "high" ? "hedefin üstünde" : "hedef aralığında";
     return `<div class="vrow" aria-label="${esc(r.label)}: ${fmt(r.sets)} set, ${state_}">

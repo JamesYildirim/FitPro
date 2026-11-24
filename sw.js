@@ -1,15 +1,16 @@
 // Çevrimdışı çalışma: uygulama dosyaları önbelleğe alınır, ağ varsa güncel sürüm kullanılır.
 // Dosya eklediğinde/değiştirdiğinde VERSION'ı artır.
-const VERSION = "v3-6";
+const VERSION = "v3-13";
 const CACHE = "antrenman-" + VERSION;
 // Hareket videoları ayrı önbellekte durur: sürüm değişince silinmez, ilk izlenişte indirilir
 const MEDIA = "antrenman-media";
 const ASSETS = [
   "./", "index.html", "manifest.json", "icon.svg", "icon-192.png", "icon-512.png", "css/app.css",
-  "js/app.js", "js/config.js", "js/state/store.js",
+  "js/app.js", "js/config.js", "js/state/store.js", "js/state/settings.js", "js/ui/wake.js",
   "js/cloud/auth.js", "js/cloud/sync.js", "js/cloud/decide.js", "js/ui/auth.js",
+  "js/ai/key.js", "js/ai/claude.js", "js/ai/food.js", "js/ui/foodphoto.js", "js/legal.js", "js/ui/privacy.js",
   "js/core/program.js", "js/core/nutrition.js", "js/core/anim.js", "js/core/progression.js",
-  "js/data/exercises.js", "js/data/demos.js", "js/data/renames.js", "js/data/videos.js",
+  "js/data/exercises.js", "js/data/demos.js", "js/data/renames.js", "js/data/videos.js", "js/data/body-paths.js", "js/ui/bodymap.js",
   "js/ui/dom.js", "js/ui/demo.js", "js/ui/timer.js", "js/ui/plan.js", "js/ui/wheel.js", "js/ui/swap.js",
   "js/ui/workout.js", "js/ui/nutrition.js", "js/ui/program.js", "js/ui/library.js", "js/ui/stats.js", "js/ui/profile.js",
 ];

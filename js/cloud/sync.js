@@ -5,6 +5,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../config.js";
 import { state, onSave, hasData, snapshot, replaceAll } from "../state/store.js";
 import { validSession, signOut } from "./auth.js";
 import { decide } from "./decide.js";
+import { clearAiConfig } from "../ai/key.js";
 import { esc, fmtDate, openSheet, ask } from "../ui/dom.js";
 
 const META_KEY = "antrenman.sync";
@@ -152,6 +153,25 @@ export function initSync(opts) {
   return syncNow();
 }
 
+// Hesabı kalıcı olarak sil (KVKK m.7, m.11): veritabanındaki delete_my_account() fonksiyonu yalnızca
+// çağıran kullanıcının hesabını siler; user_data satırı da kendiliğinden silinir (on delete cascade).
+// Ardından bu cihazdaki her şey (veri, oturum, eşitleme bilgisi, yapay zekâ anahtarı) temizlenir.
+export async function deleteAccount() {
+  const s = await validSession({ force: true });
+  if (!s) throw new SyncError("Oturum doğrulanamadı. İnternet bağlantını kontrol et ya da çıkış yapıp tekrar giriş yap.");
+  clearTimeout(pushTimer); // silinen hesaba yeniden veri gönderilmesin
+  try {
+    await rest(s, "POST", "/rpc/delete_my_account", {});
+  } catch (e) {
+    if (e instanceof TypeError) throw new SyncError("İnternet bağlantısı yok. Hesap silinmedi.");
+    throw e;
+  }
+  await signOut();
+  try { localStorage.removeItem(META_KEY); localStorage.removeItem("fitpro.consent"); } catch {}
+  clearAiConfig();
+  replaceAll(null);
+}
+
 // Çıkış: önce bekleyen değişiklikleri gönder; gönderilemezse kullanıcıya sor. Sonra cihazdaki veriyi temizle.
 export async function logout() {
   if (readMeta().dirty) await syncNow();
@@ -163,6 +183,7 @@ export async function logout() {
   clearTimeout(pushTimer);
   await signOut();
   try { localStorage.removeItem(META_KEY); } catch {}
+  clearAiConfig(); // yapay zekâ API anahtarı cihazdan silinir
   replaceAll(null);
   return true;
 }

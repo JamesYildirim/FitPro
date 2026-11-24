@@ -1,10 +1,55 @@
 // Antrenman sekmesi: seansı başlat, set set kilo/tekrar kaydet, dinlenme sayacı, seansı bitir → geçmiş
 import { state, save } from "../state/store.js";
 import { suggest, setsText, isTimed, isBodyweight, isBand } from "../core/progression.js";
-import { esc, fmt, fmtDate, icon, toast, vibrate, todayName, DAY_MS, ask } from "./dom.js";
+import { esc, fmt, fmtDate, icon, toast, vibrate, todayName, DAY_MS, ask, openSheet } from "./dom.js";
 import { bindDemoClicks } from "./demo.js";
 import { nextTrainingDay } from "./plan.js";
 import { startRest } from "./timer.js";
+import { settings, restFor, restSeconds, clampRest, mmss, REST_STEP } from "../state/settings.js";
+import { syncWakeLock } from "./wake.js";
+
+// Hareketin dinlenme süresi etiketi (dokununca harekete özel süre ayarlanır)
+function restLabel(e) {
+  const s = settings();
+  if (s.restMode === "off") return "Sayaç kapalı";
+  return `Dinlenme ${mmss(restFor(e))}${s.restByEx[e.name] ? " · özel" : ""}`;
+}
+
+// Harekete özel dinlenme süresi penceresi
+function openRestSheet(ex, onDone) {
+  const s = settings();
+  const base = restSeconds({ ...s, restByEx: {} }, ex) || ex.restS || 90; // özel ayar olmasaydı geçerli süre
+  let val = s.restByEx[ex.name] || base;
+  const sheet = openSheet(`
+    <div class="between"><div><div class="eyebrow">Dinlenme süresi</div><div class="h2">${esc(ex.name)}</div></div>
+      <button type="button" class="close" data-close aria-label="Kapat">${icon("x")}</button></div>
+    <p class="small muted" style="margin:6px 0 14px">Bu hareketten sonraki setler arası dinlenme. Uygulama bu süreyi bu hareket için hatırlar.</p>
+    <div class="stepper">
+      <button type="button" data-step="-${REST_STEP}" aria-label="${REST_STEP} saniye azalt">−${REST_STEP}</button>
+      <b data-val aria-live="polite"></b>
+      <button type="button" data-step="${REST_STEP}" aria-label="${REST_STEP} saniye artır">+${REST_STEP}</button>
+    </div>
+    <p class="tiny muted" style="text-align:center;margin:8px 0 14px" data-base></p>
+    <button type="button" class="btn primary block" data-save>Kaydet</button>
+    <button type="button" class="btn block hidden" style="margin-top:8px" data-default>Varsayılana dön</button>
+  `, { label: ex.name + " dinlenme süresi" });
+  const el = sheet.el;
+  const paint = () => {
+    el.querySelector("[data-val]").textContent = mmss(val);
+    el.querySelector("[data-base]").textContent = `Varsayılan: ${mmss(base)} (${s.restMode === "fixed" ? "sabit süre ayarı" : "programa göre"})`;
+    el.querySelector("[data-default]").classList.toggle("hidden", !s.restByEx[ex.name]);
+  };
+  el.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => { val = clampRest(val + +b.dataset.step); paint(); }));
+  el.querySelector("[data-save]").addEventListener("click", () => {
+    if (val === base) delete s.restByEx[ex.name]; else s.restByEx[ex.name] = val;
+    save(); sheet.close(); onDone();
+  });
+  el.querySelector("[data-default]").addEventListener("click", () => {
+    delete s.restByEx[ex.name];
+    save(); sheet.close(); onDone();
+  });
+  paint();
+}
 
 // Programdaki bir günü aktif seansa çevirir; öneri motorunun kilo/tekrarlarıyla doldurur
 // Promise<boolean>: seans başlatıldı mı
@@ -117,7 +162,8 @@ function exerciseCard(e, i) {
       <div class="meta">
         <span class="tag">${esc(e.role)}</span>
         <button type="button" class="ex-name" style="margin-top:4px" data-demo="${esc(e.name)}">${esc(e.name)}</button>
-        <div class="ex-sub">Hedef ${e.log.length} × ${esc(e.reps)} · dinlenme ${esc(e.rest)}</div>
+        <div class="ex-sub">Hedef ${e.log.length} × ${esc(e.reps)}</div>
+        <button type="button" class="rest-chip" data-rest aria-label="${esc(e.name)} dinlenme süresini ayarla">${icon("clock")}${esc(restLabel(e))}</button>
       </div>
     </div>
     <div class="suggest ${e.sugg.kind}"><div class="tiny muted">${esc(last)}</div>${esc(e.sugg.text)}</div>
@@ -155,6 +201,7 @@ export function render(main, ctx) {
   main.innerHTML = `<div class="tab">${state.active ? activeView() : idleView()}</div>`;
   const root = main.firstElementChild;
   bindDemoClicks(root);
+  syncWakeLock(); // seans varsa ekran açık kalır, bitince kilit bırakılır
 
   // Yazarken yeniden çizmeden kaydet (odak kaybolmasın)
   root.addEventListener("input", (e) => {
@@ -178,14 +225,20 @@ export function render(main, ctx) {
       const s = ex.log[+doneBtn.dataset.done];
       if (!s.done && !(Number(s.reps) > 0)) { toast("Önce yaptığın tekrar sayısını gir"); card.querySelector(`input[data-k="reps"][data-s="${doneBtn.dataset.done}"]`)?.focus(); return; }
       s.done = !s.done;
-      vibrate(s.done ? 40 : 15);
+      if (settings().vibrate) vibrate(s.done ? 40 : 15);
       save();
       if (s.done) {
         const all = state.active.exercises.every((x) => x.log.every((y) => y.done));
+        const sec = restFor(ex);
         if (all) toast("Tüm setler tamam! Antrenmanı bitirip kaydedebilirsin.");
-        else { startRest(ex.restS); toast(`Set kaydedildi · ${ex.restS} sn dinlenme`); }
+        else if (sec) { startRest(sec); toast(`Set kaydedildi · ${mmss(sec)} dinlenme`); }
+        else toast("Set kaydedildi");
       }
       return ctx.refresh();
+    }
+    if (e.target.closest("[data-rest]") && card) {
+      openRestSheet(state.active.exercises[+card.dataset.ex], ctx.refresh);
+      return;
     }
     if (e.target.closest("[data-add]") && card) {
       const ex = state.active.exercises[+card.dataset.ex];
